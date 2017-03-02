@@ -1,0 +1,781 @@
+Red Wine Quality by Anne Le
+========================================================
+This analysis is an exploration of the red wine quality data provided by Paulo Cortez (Univ. Minho). This dataset is a collection of eleven characteristics that constitute to its score. 
+
+![](http://winefolly.com/wp-content/uploads/2012/07/characteristics-of-wine-tasting-wine1-640x446.jpg)
+
+You can find more information about these characteristics [here](http://winefolly.com/review/wine-characteristics/).
+
+#### Attribute Information:  
+
+Input variables (based on physicochemical tests):  
+   1 - fixed acidity (tartaric acid - g / dm^3)  
+   2 - volatile acidity (acetic acid - g / dm^3)  
+   3 - citric acid (g / dm^3)  
+   4 - residual sugar (g / dm^3)  
+   5 - chlorides (sodium chloride - g / dm^3  
+   6 - free sulfur dioxide (mg / dm^3)  
+   7 - total sulfur dioxide (mg / dm^3)  
+   8 - density (g / cm^3)  
+   9 - pH  
+   10 - sulphates (potassium sulphate - g / dm3)  
+   11 - alcohol (% by volume)  
+   
+Output variable (based on sensory data):   
+   12 - quality (score between 0 and 10)  
+   
+| Really Bad | Bad | Average | Good | Really Good |
+|:----------:|:---:|:-------:|:----:|:-----------:|
+| 1-2 | 3-4 | 5-6 | 7-8 | 9-10 |
+
+
+#### Attribute Description:
+   1 - fixed acidity: most acids involved with wine or fixed or nonvolatile (do not evaporate readily)
+
+   2 - volatile acidity: the amount of acetic acid in wine, which at too high of levels can lead to an unpleasant, vinegar taste
+
+   3 - citric acid: found in small quantities, citric acid can add 'freshness' and flavor to wines
+
+   4 - residual sugar: the amount of sugar remaining after fermentation stops, it's rare to find wines with less than 1 gram/liter and wines with greater than 45 grams/liter are considered sweet
+
+   5 - chlorides: the amount of salt in the wine
+
+   6 - free sulfur dioxide: the free form of SO2 exists in equilibrium between molecular SO2 (as a dissolved gas) and bisulfite ion; it prevents microbial growth and the oxidation of wine
+
+   7 - total sulfur dioxide: amount of free and bound forms of S02; in low concentrations, SO2 is mostly undetectable in wine, but at free SO2 concentrations over 50 ppm, SO2 becomes evident in the nose and taste of wine
+
+   8 - density: the density of water is close to that of water depending on the percent alcohol and sugar content
+
+   9 - pH: describes how acidic or basic a wine is on a scale from 0 (very acidic) to 14 (very basic); most wines are between 3-4 on the pH scale
+
+   10 - sulphates: a wine additive which can contribute to sulfur dioxide gas (S02) levels, wich acts as an antimicrobial and antioxidant
+
+   11 - alcohol: the percent alcohol content of the wine
+
+   
+```{r echo=FALSE, message=FALSE, warning=FALSE, packages}
+# Load all of the packages that you end up using
+# in your analysis in this code chunk.
+
+# Notice that the parameter "echo" was set to FALSE for this code chunk.
+# This prevents the code from displaying in the knitted HTML output.
+# You should set echo=FALSE for all code chunks in your file.
+
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+library(memisc)
+library(psych)
+library(RColorBrewer)
+library(corrplot)
+library(colorRamps)
+library(GGally)
+```
+
+```{r echo=FALSE, Load_the_Data}
+# Load the Data
+df <- read.csv("wineQualityReds.csv")
+
+# Create a subset ommiting wine ids to create matrixes later.
+wine <- subset(df, select = -c(X))
+wine_subset <- wine
+
+# Converting 'quality' into a factor variable because it's a categorical variable.
+# Also it will be used correctly in future implementation.
+wine$quality <- factor(wine$quality, ordered = TRUE)
+```
+
+# Univariate Plots Section
+```{r echo=FALSE, Data_dimension}
+dim(wine)
+```
+```{r echo=FALSE, Data_structure}
+str(wine)
+```
+
+```{r echo=FALSE, message=FALSE, Histogram_fixed_acid}
+ggplot(data = wine, aes(x = fixed.acidity)) + 
+  geom_histogram(bins = 15) +
+  geom_vline(aes(xintercept = mean(wine$fixed.acidity), linetype = "Mean"), 
+             show.legend = TRUE, color = "#f90261") +
+  geom_vline(aes(xintercept = median(wine$fixed.acidity), linetype = "Median"), 
+             show.legend = TRUE, color = "#02d4f9") +
+  theme_minimal()
+
+# Summary
+with(wine, summary(fixed.acidity))
+
+# Binning continuous variable
+fa <- dplyr::select(wine, fixed.acidity)
+fa_binned <- dplyr::mutate(fa, bin = cut(fixed.acidity, breaks = c(0:16),
+                 labels = FALSE))
+fa_binned %>%
+  count(bin) %>%
+  mutate(freq = round(prop.table(n), 4))
+
+```
+
+The distribution of fixed acidity is slightly skewed. The distance between the third quadrant and the max value indicate some variability at the right tail. The mean value is larger at 8.32 with the median is slightly smaller at 7.90. About 31% of the the wine have a fixed acid level around 8 g/dm^3.
+
+```{r echo=FALSE, message=FALSE, Histogram_volatile_acid}
+ggplot(data = wine, aes(x = volatile.acidity)) + 
+  geom_histogram(bins = 15) + 
+  geom_vline(aes(xintercept = mean(wine$volatile.acidity), linetype = "Mean"), 
+             show.legend = TRUE, color = "#f90261") +
+  geom_vline(aes(xintercept = median(wine$volatile.acidity), linetype = "Median"), 
+             show.legend = TRUE, color = "#02d4f9") +
+  theme_minimal()
+
+with(wine, summary(volatile.acidity))
+va <- dplyr::select(wine, volatile.acidity)
+va_binned <- mutate(va, bin = cut(volatile.acidity, breaks = c(.2,.4,.6,.8,1,1.2,1.4,1.6),
+                 labels = c("<.2",.4,.6,.8,1,1.2,1.4)))
+va_binned %>%
+  count(bin) %>%
+  mutate(freq = round(prop.table(n), 4))
+```
+
+Volatile acidity is positively skewed with a max value of 1.58 g/dm^3. The median and the mean for this distribution is almost the same at 0.52 g/dm^3 and they are both below 0.6 g/dm^3. Roughly 40% of the wine have a volatile acidity of 0.4 g/dm^3.
+
+```{r echo=FALSE, message=FALSE, Histogram_volatile_acid_transformed}
+ggplot(data = wine, aes(x = volatile.acidity)) + 
+  geom_histogram(bins = 20) + 
+  scale_x_log10(breaks = seq(0,2,.1)) +
+  theme_minimal()
+```
+
+After transformed with a log scale, you can see a spike around 0.6 g/dm^3. 90% of the wines have a concentration of acetic acid equal to or below 0.6 g/dm^3.
+
+```{r echo=FALSE, message=FALSE, Histogram_citric_acid}
+ggplot(data = wine, aes(x = citric.acid)) + 
+  geom_histogram(bins = 15) +
+  geom_vline(aes(xintercept = mean(wine$citric.acid), linetype = "Mean"), 
+             show.legend = TRUE, color = "#f90261") +
+  geom_vline(aes(xintercept = median(wine$citric.acid), linetype = "Median"), 
+             show.legend = TRUE, color = "#02d4f9") +
+  theme_minimal()
+
+with(wine, summary(citric.acid))
+ca <- dplyr::select(wine, citric.acid)
+ca_binned <- mutate(ca, bin = cut(citric.acid, breaks = c(0,.1,.2,.3,.4,.5,.6,.7,.8,.9,1,1.1),
+                 labels = c(0,.1,.2,.3,.4,.5,.6,.7,.8,.9,1)))
+ca_binned %>%
+  count(bin) %>%
+  mutate(freq = round(prop.table(n), 4))
+```
+
+```{r  echo=FALSE, message=FALSE, Histogram_citric_acid_transformed}
+ggplot(data = wine, aes(x = citric.acid)) + 
+  geom_histogram(bins = 15) +
+  scale_x_log10(breaks = seq(0,1,.1)) +
+  theme_minimal()
+```
+
+Citric acid appear to be bimodal. One major peak at 0 and another peak just below 0.25 g/dm^3. Transforming this distribution, we dropped some values. Here the mean and the median is extremely close. The majority of the wine have a citric level below 0.6 g/dm^3. We also see that there are 132 NA values. Let's check out these values.
+
+```{r echo=FALSE}
+# Count the number of data points of citric acid that contains 0
+with(wine, summary(citric.acid > 0))
+```
+
+Now we can confirmed that there are 132 observations with 0 citric acid.
+
+```{r echo=FALSE, message=FALSE, Histogram_residual_sugar}
+ggplot(data = wine, aes(x = residual.sugar)) + 
+  geom_histogram(bins = 35, breaks = seq(0,15,1)) + 
+  geom_vline(aes(xintercept = mean(wine$residual.sugar), linetype = "Mean"), 
+             show.legend = TRUE, color = "#f90261") +
+  geom_vline(aes(xintercept = median(wine$residual.sugar), linetype = "Median"), 
+             show.legend = TRUE, color = "#02d4f9") +
+  theme_minimal()
+
+with(wine, summary(residual.sugar))
+rs <- dplyr::select(wine, residual.sugar)
+rs_binned <- mutate(rs, bin = cut(residual.sugar, breaks = c(0:15),
+                 labels = c("<1",2,3,4,5,6,7,8,9,10,11,12,13,14,15)))
+rs_binned %>%
+  count(bin) %>%
+  mutate(freq = round(prop.table(n), 4))
+```
+
+The distribution for residual sugar is very concentrated around the mean and the median.This distribution has a very long tail. Much of the variability lie between the 3rd quadrant with a value of 2.60 g/dm^3 and the upper range of 15.5 g/dm^3.
+
+```{r echo=FALSE, message=FALSE, Histogram_residual_sugar_transformed}
+ggplot(data = wine, aes(x = residual.sugar)) + 
+  geom_histogram(bins = 25) + 
+  scale_x_log10(breaks = seq(0,15,1)) +
+  theme_minimal()
+```
+
+The transformed distribution show residual sugar average concentration around 2.5 g/dm^3. Most of these variabilities have a very low concentration of residual sugar. 70% of the data lie between 2 g/dm^3 and 3 g/dm^3.
+
+```{r echo=FALSE, message=FALSE, Histogram_chlorides}
+ggplot(data = wine, aes(x = chlorides)) + 
+  geom_histogram(bins = 35) +
+  geom_vline(aes(xintercept = mean(wine$chlorides), linetype = "Mean"), 
+             show.legend = TRUE, color = "#f90261") +
+  geom_vline(aes(xintercept = median(wine$chlorides), linetype = "Median"), 
+             show.legend = TRUE, color = "#02d4f9") +
+  theme_minimal()
+
+with(wine, summary(chlorides))
+chl <- dplyr::select(wine, chlorides)
+chl_binned <- mutate(chl, bin = cut(chlorides, breaks = c(0,.1,.2,.3,.4,.5,.6),
+                 labels = c("<.1",.2,.3,.4,.5,.6)))
+chl_binned %>%
+  count(bin) %>%
+  mutate(freq = round(prop.table(n), 4))
+```
+```{r echo=FALSE, message=FALSE, Histogram_chlorides_transformed}
+ggplot(data = wine, aes(x = chlorides)) + 
+  geom_histogram(bins = 25) + 
+  scale_x_log10(breaks = seq(.01,.6,.05)) +
+  theme_minimal()
+```
+
+Chlorides appear to be normal with high a variability between the third quadrant and the upper range of 0.6 g/dm^3. It also has outliers with value at 0.01 g/dm^3. About 86% of the wine have less than or equal to 0.1 g/dm^3 of chlorides.
+
+```{r echo=FALSE, message=FALSE, Histogram_free_sulfur}
+ggplot(data = wine, aes(x = free.sulfur.dioxide)) + 
+  geom_histogram(bins = 20) + 
+  geom_vline(aes(xintercept = mean(wine$free.sulfur.dioxide), linetype = "Mean"), 
+             show.legend = TRUE, color = "#f90261") +
+  geom_vline(aes(xintercept = median(wine$free.sulfur.dioxide), linetype = "Median"), 
+             show.legend = TRUE, color = "#02d4f9") +
+  theme_minimal()
+
+with(wine, summary(free.sulfur.dioxide))
+fsd <- dplyr::select(wine, free.sulfur.dioxide)
+fsd_binned <- mutate(fsd, bin = cut(free.sulfur.dioxide, breaks = c(0,10,20,30,40,50,60,70),
+                 labels = c(10,20,30,40,50,60,70)))
+fsd_binned %>%
+  count(bin) %>%
+  mutate(freq = round(prop.table(n), 4))
+```
+
+Free sulfur dioxide is positively skewed with some outiers trailing. Most of the data is between 10 mg/dm^3 and 30 mg/dm^3. The mean is at 15.87 mg/dm^3 and the max value is 72 mg/dm^3.
+
+```{r echo=FALSE, message=FALSE, Histogram_free_sulfur_transformed}
+ggplot(data = wine, aes(x = free.sulfur.dioxide)) + 
+  geom_histogram(bins = 20) + 
+  scale_x_log10(breaks = seq(0,70,10)) +
+  theme_minimal()
+```
+
+The transformed free sulfur dioxide distribution show us a little bit more on the first quadrant where approximately 37% of the wine is.
+
+```{r echo=FALSE, message=FALSE, Histogram_total_sulfur}
+ggplot(data = wine, aes(x = total.sulfur.dioxide)) + 
+  geom_histogram(bins = 15) +
+  geom_vline(aes(xintercept = mean(wine$total.sulfur.dioxide), linetype = "Mean"), 
+             show.legend = TRUE, color = "#f90261") +
+  geom_vline(aes(xintercept = median(wine$total.sulfur.dioxide), linetype = "Median"), 
+             show.legend = TRUE, color = "#02d4f9") +
+  theme_minimal()
+
+with(wine, summary(total.sulfur.dioxide))
+tsd <- dplyr::select(wine, total.sulfur.dioxide)
+tsd_binned <- mutate(tsd, bin = cut(total.sulfur.dioxide, breaks = c(0,16,32,48,64,80,96,112,128,144,160),
+                 labels = c(0,16,32,48,64,80,96,112,128,144)))
+tsd_binned %>%
+  count(bin) %>%
+  mutate(freq = round(prop.table(n), 4))
+```
+
+Total sulfur dioxide appear to be in a similar situation with free sulfur dioxide where it is positively skewed with a high outlier value near 290 mg/dm^3. The median is at 38 mg/dm^3 and the mean is at 46.47 mg/dm^3.
+
+```{r echo=FALSE, message=FALSE, Histogram_total_sulfur_transformed}
+ggplot(data = wine, aes(x = total.sulfur.dioxide)) + 
+  geom_histogram(bins = 20) + 
+  scale_x_log10(breaks = seq(0,300,25)) +
+  theme_minimal()
+```
+
+Looking closer look at total sulfur dioxide with a log scale, it appears to be normally distributed. About 15% of the data is on each side of tail and 75% in the middle.
+
+```{r echo=FALSE, message=FALSE, Histogram_density}
+ggplot(data = wine, aes(x = density)) + 
+  geom_histogram(bins = 15) +
+  geom_vline(aes(xintercept = mean(wine$density), linetype = "Mean"), 
+             show.legend = TRUE, color = "#f90261") +
+  geom_vline(aes(xintercept = median(wine$density), linetype = "Median"), 
+             show.legend = TRUE, color = "#02d4f9") +
+  theme_minimal()
+
+with(wine, summary(density))
+den <- dplyr::select(wine, density)
+den_binned <- mutate(den, bin = cut(density, breaks = quantile(wine$density),
+                 labels = c(.990,.995,1,1.005)))
+den_binned %>%
+  count(bin) %>%
+  mutate(freq = round(prop.table(n), 4))
+```
+
+Density is evenly distributed with a mean and median that is approximately the same at 0.99 g/cm^3. The data is almost symmetrical. 
+
+```{r echo=FALSE, message=FALSE, Histogram_sulphates}
+ggplot(data = wine, aes(x = sulphates)) + 
+  geom_histogram(bins = 20) +
+  geom_vline(aes(xintercept = mean(wine$sulphates), linetype = "Mean"), 
+             show.legend = TRUE, color = "#f90261") +
+  geom_vline(aes(xintercept = median(wine$sulphates), linetype = "Median"), 
+             show.legend = TRUE, color = "#02d4f9") +
+  theme_minimal()
+
+with(wine, summary(sulphates))
+sul <- dplyr::select(wine, sulphates)
+sul_binned <- mutate(sul, bin = cut(sulphates, breaks = c(0,.5,1,1.5,2),
+                 labels = c(0,.5,1,1.5)))
+sul_binned %>%
+  count(bin) %>%
+  mutate(freq = round(prop.table(n), 4))
+```
+```{r echo=FALSE, message=FALSE, Histogram_sulphates_transformed}
+ggplot(data = wine, aes(x = sulphates)) + 
+  geom_histogram(bins = 20) + 
+  scale_x_log10(breaks = seq(0,2,.1)) +
+  theme_minimal()
+```
+
+Sulphate is another feature with most of the data points around .6 g/dm3. The spike accounts for ~85% of the wine around the mean. With a log transformation, it appears evenly distributed with a few outliers.
+
+```{r echo=FALSE, message=FALSE, Histogram_alcohol}
+ggplot(data = wine, aes(x = alcohol)) + 
+  geom_histogram(bins = 10) +
+  geom_vline(aes(xintercept = mean(wine$alcohol), linetype = "Mean"), 
+             show.legend = TRUE, color = "#f90261") +
+  geom_vline(aes(xintercept = median(wine$alcohol), linetype = "Median"), 
+             show.legend = TRUE, color = "#02d4f9") +
+  theme_minimal()
+
+with(wine, summary(alcohol))
+alc <- dplyr::select(wine, alcohol)
+alc_binned <- mutate(alc, bin = cut(alcohol, breaks = c(0,2,4,6,8,10,12,14,16),
+                 labels = c(0,2,4,6,8,10,12,14)))
+alc_binned %>%
+  count(bin) %>%
+  mutate(freq = round(prop.table(n), 4))
+```
+
+Alcohol distribution is also positively skewed with a few really low values. However, most of the wine have an average of 10.42 % of alcohol by volume. ~90% of the the wine have an alcohol content between 8 and 10 % by volume.
+
+```{r echo=FALSE, message=FALSE, Histogram_quality}
+ggplot(data = wine, aes(x = quality)) +
+  geom_histogram(stat = "count") +
+  theme_minimal()
+
+wine %>%
+  count(quality) %>%
+  mutate(freq = round(prop.table(n), 4))
+```
+
+The quality distribution appear positively skewed peaking between 5 and 6 with a median of 5.67. There are no wine that were really bad nor really good. There are a few wines that scored a 3 and an 8 but most are average. Approximately 80% of the wine has a rating between 5 and 6.
+
+```{r echo=FALSE, Acidity_level}
+wine_acidity <- wine %>%
+  mutate(acidity.level = fixed.acidity + volatile.acidity + citric.acid)
+
+ggplot(data = wine_acidity, aes(x = acidity.level)) + 
+  geom_histogram(bins = 10) +
+  geom_vline(aes(xintercept = mean(wine_acidity$acidity.level), linetype = "Mean"), 
+             show.legend = TRUE, color = "#f90261") +
+  geom_vline(aes(xintercept = median(wine_acidity$acidity.level), linetype = "Median"), 
+             show.legend = TRUE, color = "#02d4f9") +
+  theme_minimal()
+
+with(wine_acidity, summary(acidity.level))
+wal <- dplyr::select(wine_acidity, acidity.level)
+wal_binned <- mutate(wal, bin = cut(acidity.level, breaks = c(0,2,4,6,8,10,12,14,16,18),
+                 labels = c(0,2,4,6,8,10,12,14,16)))
+wal_binned %>%
+  count(bin) %>%
+  mutate(freq = round(prop.table(n), 4))
+```
+
+Here I've created a variable called `acidity`. Although the distribution of acidity level is getting closer to a normal distribution, it is still positively skewed. About 40% of the wine have an acidity level around 8.72 g/dm^3. 
+
+# Univariate Analysis
+
+### What is the structure of your dataset?
+| Observations | Variables |
+|----------|---|
+|1599 | 13 |
+
+> __Note:__ `quality` is a discrete categorical variable based on sensory data. `X` are observation ids and all others are numerical values based on physicochemical tests.  
+
+### What is/are the main feature(s) of interest in your dataset?
+The main feature of this dataset is quality. With this analysis, I seek to uncover the features that contribute to good tasting wine.  
+
+### What other features in the dataset do you think will help support your investigation into your feature(s) of interest?
+One of the characteristics about wine is the "body" and this describes the texture of wine in the mouth. A feature that influences texture is the alcohol content. The higher alcohol content is described as giving wine a richer feel. Another characteristic that stood out is acidity. Acidity give wines a tart and crisp taste. I suspect citric acid, volataile acidity and fixed acidity are important because they can effect the flavors of wine.
+
+### Did you create any new variables from existing variables in the dataset?
+I created the acidity variable where I combined fixed.acidity, volatile.acidity, and citric.acid. I wanted to see their distributions combined. If they are normally distributed or skewed. Since fixed acidity and volatile acidity are both positively skewed, the distributioni of all three acids are postively skewed as well.
+
+### Of the features you investigated, were there any unusual distributions? Did you perform any operations on the data to tidy, adjust, or change the form of the data? If so, why did you do this?
+Working with a tidy dataset, I did not have to perform additional transformation. While investigatiing, I've encountered a few interesting observations.  
+
+- Citric acid had 132 observation with a value of zero.  
+- Most of the variables are positively skewed with variability in range.  
+- The dataset is not balanced. There are more average wine than execellent or bad ones.
+
+# Bivariate Plots Section   
+
+In this section, let's look at a few variables with quality to get a feel of their correlation. Since alcohol effects the mouth feel of wine, let's look at that first.
+
+### Quality and alcohol
+```{r echo=FALSE, Quality_alcohol_box}
+with(wine, cor.test(as.numeric(quality), alcohol))
+
+ggplot(data = wine, aes(x = quality, y = alcohol)) + 
+  geom_boxplot( outlier.shape = 1) +
+  scale_y_continuous(breaks = seq(0, 15, 1)) +
+  stat_summary(fun.y = median, geom = "line", aes(group = 1, colour = "red"), linetype = 2) +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+There is a positive trend with alcohol and quality. In good quality wine, the median can be as high as 12% by volume. Interestingly, for most wine that scored a 5, the median alcohol content is the lowest and it's below 10%. This wine quality also has some extreme outliers up to 15%. So far, alcohol and quality have a correlation of 0.48.
+
+```{r echo=FALSE, Quality_alcohol_density}
+mc <- c('#9ebcda','#8c96c6','#8c6bb1','#88419d','#810f7c','#4d004b')
+ggplot(data = wine, aes(x = alcohol, color = quality)) + 
+  geom_density() +
+  scale_x_continuous(breaks = seq(0,15,.5)) +
+  scale_color_manual(values = mc) +
+  theme_minimal()
+```
+
+Using a density plot, we can see the number of wines with a lower quality are more likely to have an alcohol concentration around 9.5 % by volume. For good tasting wines the alcohol content are between 11% to 13%.
+
+```{r echo=FALSE, Quality_alcohol_density_fill}
+ggplot(data = wine, aes(x = alcohol,..count.., fill = quality, color = quality)) + 
+  geom_density(position = "fill") +
+  scale_x_continuous(breaks = seq(0,15,.5)) +
+  scale_color_manual(values = mc) +
+  scale_fill_manual(values = mc) +
+  theme_minimal()
+```
+
+The filled density plot indicate a clear positive trend for good quality wine. Average wines also have a similar trend but tend to have more wines with lower alcohol concentration.
+
+### Quality and various acids
+
+```{r echo=FALSE, Quality_fixed_acidity_box}
+with(wine, cor.test(as.numeric(quality), fixed.acidity))
+
+ggplot(data = wine, aes(x = quality, y = fixed.acidity)) + 
+  geom_boxplot( outlier.shape = 1) +
+  stat_summary(fun.y = median, geom = "line", aes(group = 1, colour = "red"), linetype = 2) +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+The amount of fixed acidity increases steadily between average wine and good wine. Here we also see that good wines and bad wine have a wide range in their IQR. This feature's correlation coefficient is low at 0.12.
+
+```{r echo=FALSE, Quality_fixed_acidity_density}
+ggplot(data = wine, aes(x = fixed.acidity,color = quality)) + 
+  geom_density() +
+  scale_x_continuous(breaks = seq(0,17,1)) +
+  scale_color_manual(values = mc) +
+  theme_minimal()
+```
+
+It's interesting to see that most wines in this data set have a fixed acidity level around 7.5. This could be the case if all the grapes were harvested and processed at the same time.
+
+```{r echo=FALSE, Quality_volatile_acid}
+with(wine, cor.test(as.numeric(quality), volatile.acidity))
+
+ggplot(data = wine, aes(x = quality, y = volatile.acidity)) + 
+  geom_boxplot( outlier.shape = 1) +
+  stat_summary(fun.y = median, geom = "line", aes(group = 1, colour = "red"), linetype = 2) +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+With a dramatic decrease in concentration, volatile acidity stabilize around 0.4 g/dm^3 for wines with a rating beween 7-8. It comes right after alcohol with a correlation at -0.39. Volatile acidity is the concentration of acetic acid in the wine. This gives the wine a vinegar taste at high concentration. [Volatile acidity is mostly caused by bacteria.](https://winemakermag.com/676-the-perils-of-volatile-acidity). Noticed that in bad tasting wines, this concentration is much higher. 
+
+```{r echo=FALSE, Quality_volatile_acid_density}
+ggplot(data = wine, aes(x = volatile.acidity,color = quality)) + 
+  geom_density() +
+  scale_x_continuous(breaks = seq(0,1.7,.1)) +
+  scale_color_manual(values = mc) +
+  theme_minimal()
+```
+
+The density plot also show that bad wines have a higher volatile acidity concentration. The range for this concentration is also wider. The average and good wines tend to have a lower concentration of volatile acidity around 0.3 to 0.4 g/dm^3.
+
+```{r echo=FALSE, Quality_citric_acid}
+with(wine, cor.test(as.numeric(quality), citric.acid))
+
+ggplot(data = wine, aes(x = quality, y = citric.acid)) + 
+  geom_boxplot( outlier.shape = 1) +
+  scale_y_continuous(breaks = seq(0, 1, .1)) +
+  stat_summary(fun.y = median, geom = "line", aes(group = 1, colour = "red"), linetype = 2) +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+As expected, citric acid is pretty significant to the taste of wine. Although the range for each rating is somewhat similar, bad wine has as low as 0.05 g/dm^3 and good wine has up to 0.4 g/dm^3. These plots also indicate variabily in the amount of citric acid with long whiskers. I'm surprised to see that the correlation coefficient is at 0.22. This is much lower than alcohol.
+
+```{r echo=FALSE, Quality_citric_acid_density}
+ggplot(data = wine, aes(x = citric.acid, color = quality)) + 
+  geom_density() +
+  scale_x_continuous(breaks = seq(0,1,.1)) +
+  scale_color_manual(values = mc) +
+  theme_minimal()
+```
+
+Citric acid can range from 0 to 0.8 g/dm^3. Citric acid in better tasting wine tend to be around 0.5 g/dm^3. For most cases of bad wine, there is no present of citric acid, this could explain that they have no flavor. Similarly, the average wines also have less citric acid in them than the good wines.
+
+```{r echo=FALSE, Quality_acidity_level}
+with(wine_acidity, cor.test(as.numeric(quality), acidity.level))
+
+ggplot(data = wine_acidity, aes(x = quality, y = acidity.level)) +
+  geom_boxplot( outlier.shape = 1) +
+  scale_y_continuous(breaks = seq(5, 17, .5)) +
+  stat_summary(fun.y = median, geom = "line", aes(group = 1, colour = "red"), linetype = 2) +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+It is interesting to see quite a bit of variance with each rating. Most of these wines have a median acidic level between 8.5 and 9.5. The range of acidity level for average wine is broad with outliers as high as 17 g/dm^3. I was hoping to see a stronger correlation with different acids combined but it only has a value of 0.10. 
+
+```{r  echo=FALSE, Quality_acidity_level_density}
+ggplot(data = wine_acidity, aes(x = acidity.level, color = quality)) + 
+  geom_density() +
+  scale_x_continuous(breaks = seq(0,20,1)) +
+  scale_color_manual(values = mc) +
+  theme_minimal()
+```
+
+This is similar to the fixed acidity level where most of the wines have a concentration value 8 g/dm^3.
+
+Now that we've looked at different features against quality, let's take a look at a matrix for other relationships.
+
+```{r echo=FALSE, matrix}
+matrix <- cor(wine_subset)
+mc2 <- colorRampPalette(c('#f7fbff','#f7fcfd','#e0ecf4','#8c96c6','#810f7c','#4d004b'))
+corrplot.mixed(matrix, tl.pos = "lt", col = mc2(250), tl.col = "black", tl.srt=35, cl.ratio=0.3)
+```  
+
+The matrix revealed a few stronger relationships between other features that were not present when we compare against just quality. Noticed that three out of four prominent relationships are related to fixed acid such as citric acid, density and pH.
+
+
+
+# Bivariate Analysis
+
+### Talk about some of the relationships you observed in this part of the investigation. How did the feature(s) of interest vary with other features in the dataset?
+
+When plotting the different features against quality, I was surprised to see that most of the relationships have a low correlaltion coefficient. Although alcohol and quality have a correlation value of 0.48, I'm not convinced that it's the dominating factor that impact the taste of wine. 
+
+When observing the overall acicity level with quality, the correlation coefficient is also very low. I was expecting a much stronger correlation. Perhaps the overall acidity level indirectly influences other features like pH or density which in turn can change the alcohol content.  
+
+### Did you observe any interesting relationships between the other features (not the main feature(s) of interest)?
+
+After examining the matrix above, there are some strong relationships between fixed acidity and other variables like citric acid volatile acidity and sulfur dioxide. This could be an indication to some lurking variable that indirectly influences the wine quality.
+
+### What was the strongest relationship you found?
+
+One of the strongest relationship observed from the matrix is pH and fixed acidity at -0.68. Follow by fixed acidity and citric acid, fixed acidity and density, and free sulfur dioxide and total sulfur dioxide. All have a positive correlation efficient of 0.67. The matrix also confirmed that the strongest relationship to quality is alcohol content with a correlation coefficient of 0.48.
+
+# Multivariate Plots Section
+
+In the previous section, we've seen a few relationships with various acids. In this section, let's explore those features and how they influence the quality of red wine.
+
+```{r echo=FALSE, FA_pH_quality}
+ggplot(data = wine, aes(x = fixed.acidity, y = pH)) + 
+  geom_point(position = position_jitter(), aes(color = quality)) +
+  geom_smooth(method = "lm") +
+  scale_color_brewer(palette = "RdBu") +
+  theme_minimal()
+  #theme(panel.background = element_rect(fill = "777777"))
+```
+
+Having a -0.68 correlation coefficient, a high concentration of fixed acidity seem to drive the pH level down making the wine more acidity. Here I've choosen a diverging color palette that put more emphasisis the lower and higher quality wine. While most of the average wines have a pH between 3 and 3.5 with fixed acid concentration ranging from 6 g/dm^3 to 10 g/dm^3, the good wines follow a general relationship as well. 
+
+```{r echo=FALSE, FA_density_quality}
+ggplot(data = wine, aes(x = fixed.acidity, y = density)) + 
+  geom_point(position = position_jitter(), aes(color = quality)) +
+  scale_color_brewer(palette = "RdBu") +
+  geom_smooth(method = "lm") +
+  theme_minimal()
+```  
+
+The relationship between density and fixed acidity is another strong feature. This is a positive relationship with a 0.67 correlation coefficient. The amount of fixed acids here influences how dense with wine is. The higher the concentration, the denser the wine. Looking at the good quality wines, we can see that most are concentrate towards the lower side and the average wines are mostly at the top. Density can contribute to the `body` of wine. This could make wine feel more viscose in the mouth. 
+
+The concentration of fixed acidity in good wine is also lower around 8 g/dm^3 to 10 g/dm^3. Fixed acidity in this dataset measures the level of tartaric acid in the wine. Tartaric acid influences the taste and feel of the wine. It also kills undesirable bacteria by lowering the pH. A high concentration of it can cause wine to feel dense in the mouth.
+
+```{r echo=FALSE, FA_CA_quality}
+ggplot(data = wine, aes(x = fixed.acidity, y = citric.acid)) + 
+  geom_point(position = position_jitter(), aes(color = quality)) +
+  scale_color_brewer(palette = "RdBu") +
+  geom_smooth(method = "lm") +  
+  theme_minimal()
+```  
+
+Fixed acidity and citric hold the strongest positive relationship. As the concentration of citric acid increases, the concentration of fixed acid also increases. Here, the average wines are mostly in the lower region of citric acid and fixed acid. The good quality wine mostly have a citric level above 0.25 g/dm^3 to 0.75 g/dm^3.
+
+```{r echo=FALSE, Acidity_density_quality}
+ggplot(data = wine_acidity, aes(x = acidity.level, y = density)) + 
+  geom_point(position = position_jitter(), aes(color = quality)) +
+  scale_color_brewer(palette = "RdBu") +
+  geom_smooth(method = "lm") +
+  theme_minimal()
+```  
+
+Similarly, the acidity level of quality resembles fixed acidity. Most of the good wines have a lower density and the average wines are higher in density.
+
+```{r echo=FALSE, va_ca}
+ggplot(data = wine, aes(x = citric.acid, y = volatile.acidity)) +
+  geom_point(position = position_jitter(), aes(color = quality)) +
+  scale_color_brewer(palette = "RdBu") +
+  geom_smooth(method = "lm") +
+  theme_minimal()
+```
+
+This negative relationship between citric acid and volatile acidity has a correlation of 0.55. You can see that most bad wines have little presence of citric acid. These wines also have a higher concentration of volatile acidity. The good wines have a decent amount of citric acid and the level of volatile acids are around 0.4 g/dm^3 and below.
+
+```{r echo=FALSE, sulfur_dioxide}
+ggplot(data = wine, aes(x = total.sulfur.dioxide, y = free.sulfur.dioxide)) +
+  geom_point(position = position_jitter(), aes(color = quality)) +
+  scale_color_brewer(palette = "RdBu") +
+  geom_smooth(method = "lm") +
+  theme_minimal()
+```
+
+With a correlation at 0.67, free sulfur dioxide and total sulfur dioxide share a positive relationship. Higher concentration of free sulfur dioxide also mean a higher concentration of total sulfur dioxide. Here, we see that the good wines range between 5 mg/dm^3 to 30 mg/dm^3 in free sulfur dioxide and also have a lower total sulfur dioxide concentration. The average wines tend to have a lower a free sulfur dioxide but high in total sulfur dioxide. 
+
+Now that we've looked at different features against quality, let's take a look at a multivariate matrix for these features.
+
+```{r echo=FALSE, message=FALSE, multivariate_matrix}
+#p_ <- GGally::print_if_interactive
+
+# Matrix drawing size is too small and difficult to read.
+#ggpairs(data = wine, c(1,2,3,11,12),
+#              columnLabels = c("fixed.acidity", "volatile.acidity", "citric.acid", "alcohol", "quality"),
+#              mapping = ggplot2::aes(color = quality, alpha = .02),
+#              upper = list(continuous = wrap("cor", size = 3))) + 
+#  theme_minimal()
+
+#ggscatmat(data = wine, alpha = .1, color = "quality") + theme_minimal(base_size = 10)
+```  
+
+
+```{r Linear_model}
+m1 <- lm(as.numeric(quality) ~ alcohol, data = wine_acidity)
+m2 <- update(m1, ~. + acidity.level)
+
+summary(m2)
+```
+
+# Multivariate Analysis
+
+### Talk about some of the relationships you observed in this part of the investigation. Were there features that strengthened each other in terms of looking at your feature(s) of interest?
+
+Looking at multiple features against quality, we can see that there are multiple features that effects how wine taste. Since fixed acidity is the amount of tartaric acid present in wine and citric acid is a flavor enchancer to "flat" tasting wines, these two features greatly impact how wine taste. The higher amount of citric acid also contains a higher amount of fixed acid. Higher amount of fixed acid lead to a more dense wine with a lower pH level. This is consistent with what we observed in the previous section.
+
+### Were there any interesting or surprising interactions between features?
+
+Free sulfur dioxide and total sulfur dioxide also have a strong interaction with each other. These features measure the amount of S02. This is an anti-microbial agent used to regulate growth of harmful yeast. Too much of sulfites could also stop the fermentation process. Although this is a positive relationship, the plot show a high dispersion of bad and average wines. This high concentration could cause wine to smell very unpleasant.
+
+### OPTIONAL: Did you create any models with your dataset? Discuss the strengths and limitations of your model.
+
+Here I also created two models. One with alcohol and the other with acidity level. Although the result indicated that both alcohol and acidity level have a significant p-values but the R-squared indicate that these models are not a good fit in predicting wine quality with alcohol and acidity. This could possibly be that most of the wine tasted are average and there were much variability in each category of wine quality.
+
+
+------
+
+# Final Plots and Summary
+
+### Plot One
+```{r echo=FALSE, Plot_One}
+ggplot(data = wine, aes(x = quality, y = alcohol)) + 
+  geom_boxplot( outlier.shape = 1) +
+  theme_minimal() +
+  labs(title = "Alcohol Concentration in Wine Quality",
+       y = "Alcohol % by volume",
+       x = "Wine Quality Rating")
+```
+
+### Description One
+
+The level of alcohol concentration peeks at 14.9 % by volume for good wines, the average wines tend stay between 9% to 11%. This red wine sample data has a big range of variability but it is a positive correlation. For these wines, the higer alcohol content tend to get a better rating. Wine with a higher alcohol concentration also have more body and less watery. Since alcohol allow you to [feel heat](http://www.winegeeks.com/articles/93/the_flavor_of_wine/) from the wine this could possibly explain that it enchances the aroma and texture of the wine and allowing the tasters to experience more complex flavors.  
+
+### Plot Two
+```{r echo=FALSE, Plot_Two}
+ggplot(data = wine, aes(x = volatile.acidity, color = quality)) + 
+  geom_density() +
+  scale_x_continuous(breaks = seq(0,1.7,.1)) +
+  scale_color_manual(values = mc) +
+  theme_minimal() +
+  labs(title = "Volatile acidity in Wine Quality",
+       x = "Volatile acidity (g/dm^3)")
+```
+
+### Description Two
+
+The presence of acetic acid is due to yeast and bacterial metabolism. It contributes to the smell and taste of wine. It is apparent that the better tasting wines have a lower amount of volatile acids in them. A high amount of volatile acidity gives wine an unpleasant vinegar taste. In this case, the average wines tend to be around 0.4 g/dm^3 to 0.8 g/dm^3.
+
+### Plot Three
+```{r echo=FALSE, Plot_Three}
+ggplot(data = wine, aes(x = citric.acid, y = volatile.acidity)) +
+  geom_point(position = position_jitter(), aes(color = quality)) +
+  scale_color_brewer(palette = "RdBu") +
+  geom_smooth(method = "lm") +
+  theme_minimal() +
+  labs(title = "Impact of citric acid and volatile acidity on quality",
+       x = "Citric Acid (g/dm^3)",
+       y = "Volatile acidity (g/dm^3)")
+```
+
+### Description Three
+
+Volatile acidity or acetic acid also has a strong relationship with citric acid. In this case, we see the average and bad wines tend to have more acetic acid.  While citric acid gives wine "freshness", the downside to it is that it promotes the growth of unwanted microbes. With the high amount of acetic acid these wine, it is possible that these wine have more vinegar taste resulting from the two acids thus getting a bad rating. 
+
+We can see that citric acid is prominent in all the quality levels. Most of the bad tasting wine in this data set doesn't have enough citric acid. Recall that the level of citric acid for better tasting wines have a median of ~0.4 g/dm^3 from 0 to 1. The level of citric acid for bad wines in this case are lower than the median.
+
+
+
+
+
+------
+
+# Reflection
+
+This dataset has given me some insights on how different elements can impact the taste of wine although this is purely subjective based on the taster.
+
+I started the exploration by plotting every feature with a histogram to get a better understanding of their distributions. I noticed that many of these features are positively skewed. I was interested in alcohol because alcohol show a strong influence in wine quality. I also suspect that the various acids influence how wine taste. After plotting these features with quality and calculating the correlation coefficient, I found that none of these variables directly drives quality. 
+
+I used the density plot to have a better look at the different distributions with quality and that allow me to get a better idea of how the various acids affect the quality. These plots helped me see a whole different relationship between onen variable and another in the data that the histogram did not capture. Once I started investigating the different acids, I learned that they can make wine more complex. I was excited to see these acids to each other but I was also overwhelmed because it was difficult for me to pin point what causes what. Depending on the amount of each acid present in wine, they can enchance the wines characteristics or turn the wines into something unpleasant to drink and smell.
+
+I created a new variable to look at the overall acidity in the wine. I was hoping together they would have a stronger correlation to quality but the correlation did not budge much.
+
+In addition, I also calculated several matrixes and got distracted with stronger correlelations that did not surface in the matrix shown here. Due to the complexity and numerous amount of features in this dataset, I've ommitted to keep the analysis more focused.
+
+While analyzing this dataset, I keep wanting to compare it to other red wine data. This dataset would benefit from having additional wine data from other regions like Sonoma or Napa Valley. Also having more data on really bad or really good wine would be extra nice. Next time when I buy wine, I might look for a bottle from Portugal and a local winery to see how different they are.
+
+# References
+Data:  
+[Data Citation](https://s3.amazonaws.com/udacity-hosted-downloads/ud651/wineQualityInfo.txt)  
+[GGally](http://ggobi.github.io/ggally/rd.html#ggpairs)  
+
+R:  
+[Density plots](http://www.sthda.com/english/wiki/ggplot2-density-plot-quick-start-guide-r-software-and-data-visualization)  
+[dplyr summarise](http://www.milanor.net/blog/aggregation-dplyr-summarise-summarise_each/)  
+[summarise_each](http://stackoverflow.com/questions/21644848/summarizing-multiple-columns-with-dplyr)
+[Interpreting linear models in R](http://blog.yhat.com/posts/r-lm-summary.html)
+[Linear Models](http://data.princeton.edu/R/linearModels.html)
+[corrplot](https://cran.r-project.org/web/packages/corrplot/vignettes/corrplot-intro.html)
+
+Wine knowledge:  
+[Waterhouse Lab](http://waterhouse.ucdavis.edu/whats-in-wine/fixed-acidity)  
+[Sulfur in wine](http://www.morethanorganic.com/sulphur-in-wine)  
+[Wine Chemistry](http://www.calwineries.com/learn/wine-chemistry/wine-acids)  
+[Wine flavors](http://www.winegeeks.com/articles/93/the_flavor_of_wine/)  
+[Volatile acidity](https://winemakermag.com/676-the-perils-of-volatile-acidity)  
+[Wine making](https://en.wikipedia.org/wiki/Fermentation_in_winemaking)  
+[Chlorides in wine](http://wineoscope.com/2015/10/02/when-a-wine-is-salty-and-why-it-shouldnt-be/)  
+[Citric acid](http://wineserver.ucdavis.edu/industry/enology/methods_and_techniques/reagents/citric_acid.html)  
+[Sulfur dioxide](http://www.aromadictionary.com/articles/sulfurdioxide_article.html)  
+[Wine characteristics](http://winefolly.com/review/wine-characteristics/)
