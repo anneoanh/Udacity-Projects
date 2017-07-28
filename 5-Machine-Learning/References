@@ -1,0 +1,15 @@
+References
+
+Here are a few major references used for this project.
+
+[Udacity Discussion Forum](https://discussions.udacity.com/t/having-trouble-with-gridsearchcv/186377/6)  
+[Sci-kit Learn](http://scikit-learn.org/stable/)  
+[Machine learning decision tree](http://christianherta.de/lehre/dataScience/machineLearning/decision-trees.php)  
+[Machine learning mastery](http://machinelearningmastery.com/automate-machine-learning-workflows-pipelines-python-scikit-learn/)  
+[Select kbest](http://nullege.com/codes/search/sklearn.feature_selection.SelectKBest)  
+[Feature scaling](http://sebastianraschka.com/Articles/2014_about_feature_scaling.html#feature-scaling---standardization)  
+[Machine learning Mark Ham](https://github.com/justmarkham/scikit-learn-videos/blob/master/09_classification_metrics.ipynb)  
+[Sample Enron Project](https://github.com/myaqoob67/Udacity_ML/blob/master/scripts/final_project.ipynb)  
+[Seaborn scatterplots](https://chrisalbon.com/python/seaborn_scatterplot.html)  
+[Seaborn plots](https://seaborn.pydata.org/)  
+[Machine learning advice](https://jmetzen.github.io/2015-01-29/ml_advice.html)  
