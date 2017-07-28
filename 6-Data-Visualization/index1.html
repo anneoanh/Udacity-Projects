@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>D3 Example</title>
+    <script src="http://d3js.org/d3.v3.min.js"></script>
+
+    <style>
+      
+      h2 {
+          color: #232323;
+          text-align: center;
+          /*font-family: "Helvetica Neue", Helvetica, sans-serif*/
+          ;
+        }
+
+      .axis text {
+        /*font-family: "Helvetica Neue", Helvetica, sans-serif;*/
+        font-size: 10pt;
+      }
+      .axis .label {
+        font-size: 14pt;
+      }
+
+      .axis path, .axis line {
+        fill: none;
+        stroke: #000;
+        shape-rendering: crispEdges;
+      }
+
+      .y.axis path, .y.axis line {
+        stroke: none;
+      }
+
+      .bar {
+        fill: #84d2ff;
+      }
+
+      .bar:hover {
+        fill: #fcc56c;
+      }
+
+      .tooltip {
+        line-height: 1.5;
+        font-weight: bold;
+        font-size: 8pt;
+        padding: 12px;
+        background: rgba(0, 0, 0, 0.8);
+        color: #fff;
+        border-radius: 2px;
+      }
+
+    </style>
+  </head>
+  <body>
+
+    <script type="text/javascript"></script>
+      This data set contain information about 1157 baseball players and their handedness (right, left, or both handed), height (in inches), weight (in pounds), batting average, and home runs. This visualization look at the home run averages from all these players.
+    </script>
+    <script>
+
+
+      //Define chart boundaries, margins and padding
+      var outerWidth = 960,
+          outerHeight = 500,
+          margin = { left: 130, top: 30, right: 20, bottom: 130 },
+          barPadding = 0.2;
+
+      
+      //Chart title
+      d3.select("body")
+          .append("h2")
+          .text("Baseball home runs by handedness");
+
+      
+      var tooltip = d3.select("body").append("div")
+          .style("position", "absolute")
+          .style('padding','0 10px')
+          .style('opacity',0)
+          .attr('class','tooltip');
+          // .text("sample tooltip");
+
+
+      //Define chart column variable names
+      var xColumn = "values",
+          yColumn = "key",
+          xAxisLabelText = "Home Runs",
+          xAxisLabelOffset = 55,
+          yAxisLabelText = "Handedness",
+          yAxisLabelOffset =40;
+
+      var innerWidth  = outerWidth  - margin.left - margin.right;
+      var innerHeight = outerHeight - margin.top  - margin.bottom;
+
+      
+      //Create and append svg element
+      var svg = d3.select("body").append("svg")
+          .attr("width",  outerWidth)
+          .attr("height", outerHeight);
+      
+      
+      //Create svg "group" element 
+      var g = svg.append("g")
+          .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      //Define xAxis "group" and alignment
+      var xAxisG = g.append("g")
+          .attr("class", "x axis")
+          .attr("transform", "translate(0," + innerHeight + ")")
+
+      
+      //Create x axis label and alignment
+      var xAxisLabel = xAxisG.append("text")
+          .style("text-anchor", "middle") //Center text
+          .attr("x", innerWidth / 2)      //Center in horizontal direction
+          .attr("y", xAxisLabelOffset)    //Y position
+          .attr("class", "label")         //Assign class for easy access
+          .text(xAxisLabelText);
+        
+
+      //Define yAxis "group" and labels
+      var yAxisG = g.append("g")
+         .attr("class", "y axis");
+        
+
+      //Create x axis label and alignment
+      var yAxisLabel = yAxisG.append("text")
+          .style("text-anchor", "middle")
+          .attr("transform", "translate(-" + yAxisLabelOffset + "," + (innerHeight / 2) + ") rotate(-90)")
+          .attr("class", "label")
+          .text(yAxisLabelText);
+
+      
+      //Define scales
+      //Use ordinal scales for categorical data
+      //Use rangeBands to automatically calculate each bar with padding
+      var xScale = d3.scale.linear().range(      [0, innerWidth]);
+      var yScale = d3.scale.ordinal().rangeBands([0, innerHeight], barPadding);
+
+      //Use custom tick format
+      var siFormat = d3.format("s");
+      // var customYTickFormat = function (d){
+      //   return siFormat(d).replace(["L", "R", "B"], ["Left", "Right", "Both"]);
+      // };
+
+      // var customXTickFormat = function (d){
+      //   return siFormat(d).replace(["L", "R", "B"], ["Left", "Right", "Both"]);
+      // };
+      
+
+      //Create x, y Axis instance and set scale
+      var xAxis = d3.svg.axis().scale(xScale).orient("bottom")
+          .ticks(5)                   // Use approximately 5 ticks marks.
+          .tickFormat(d3.format("s")) // Use intelligent abbreviations, e.g. 5M for 5 Million
+          .outerTickSize(0);          // Turn off the marks at the end of the axis.
+      var yAxis = d3.svg.axis().scale(yScale).orient("left")
+          .outerTickSize(0);          // Turn off the marks at the end of the axis.
+
+
+      //Create draw function
+      function draw(dataCSV){
+
+          //SAMPLE TEST DATA//
+          // data = [{"handedness": "R", "HR": 31395},
+          //           {"handedness": "L", "HR": 17743},
+          //           {"handedness": "B", "HR": 3343}];
+
+          //Transform data to group handedness together and sum total home runs
+          var data = d3.nest()
+              .key(function(d) { return d.handedness; })
+              .rollup(function(v) { return d3.sum(v, function(d) { return d.HR; }); })
+              .entries(dataCSV);
+
+
+          //Define x,y scale domain after data is loaded
+          xScale.domain([0, d3.max(data, function (d){ return d[xColumn]; })]);
+          yScale.domain(       data.map( function (d){ return d[yColumn]; }));
+          
+          //TESTING SCALES//
+          // xScale.domain([0, 31395]);
+          // yScale.domain(["Right", "Left", "Both"])
+
+          //TROUBLE SHOOT WITH CONSOLE: CHECK XSCALE VALUES
+          // console.log("xScale: " + d3.max(data, function (d){ return d[xColumn]; }));
+          // console.log("yScale: " + data.map( function (d){ return d[yColumn]; }));
+
+          
+
+          //Use "group" element to call axes and apply the axes method
+          xAxisG.call(xAxis);
+          yAxisG.call(yAxis);
+
+          
+          // debugger;
+          //Create bars variable
+          //Use "group" to create empty rect, bind data and append rect
+          var bars = g.selectAll(".bar").data(data);
+          bars.enter().append("rect")
+              .attr("class", "bar")
+              .attr("height", yScale.rangeBand());
+          bars
+              .attr("x", 0)
+              .attr("y",     function (d){ return yScale(d[yColumn]); })
+              .attr("width", function (d){ return xScale(d[xColumn]); });
+
+          bars
+              .on('mouseover', function(d) {
+          tooltip.transition()
+              .style('opacity', .9)
+              .offset([-10, 0])
+            // .style('background', 'white')
+          tooltip.html(d.key + " : " + d.values )
+              .style('left',(d3.event.pageX - 35) + 'px')
+              .style('top', (d3.event.pageY - 30) + 'px')
+               })
+               .on('mouseout', function(d) {
+          tooltip.transition()
+              .style('opacity', 0)
+          })
+            
+          bars.exit().remove();
+        }
+
+      function type(d){
+          d.handedness = d.handedness,
+          d.HR = +d.HR;
+          return d;
+      }
+
+      d3.csv("baseball_data.csv", type, draw);
+
+      </script>
+
+  </body>
+</html>

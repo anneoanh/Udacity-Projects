@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Effective Visualization</title>
+    <script src="http://d3js.org/d3.v3.min.js"></script>
+    <style>
+      h1 {
+        text-align: center;
+      }      
+      h2 {
+          color: #232323;
+          text-align: center;
+          /*font-family: "Helvetica Neue", Helvetica, sans-serif*/
+          /*;*/
+        }
+      p {
+        text-align: center;
+      }
+      .svg {
+        display: block;
+        margin: auto;
+        /*outline: 1px solid blue;*/
+        /*top:10%; left:5%; width:90%; height:90%; */
+      }
+      .axis text {
+        /*font-family: "Helvetica Neue", Helvetica, sans-serif;*/
+        font-size: 10pt;
+      }
+      .axis .label {
+        font-size: 14pt;
+      }
+      .axis path, .axis line {
+        fill: none;
+        stroke: #000;
+        shape-rendering: crispEdges;
+      }
+      .y.axis path, .y.axis line {
+        stroke: none;
+      }
+      .bar {
+        fill: #84d2ff;
+      }
+      .bar:hover {
+        fill: #fcc56c;
+      }
+      .tooltip {
+        line-height: 1.5;
+        font-weight: bold;
+        font-size: 8pt;
+        padding: 12px;
+        background: rgba(0, 0, 0, 0.8);
+        color: #fff;
+        border-radius: 2px;
+      }
+      .dataInfo {
+        margin:auto;
+      }
+      .radio {
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+      <h1>Lefties got an advantage in baseball</h1>
+      <p>
+      Lefties make up roughly 10% of the general population. According to <a href="https://www.livescience.com/2665-baseball-rigged-lefties.html">livescience</a>, there are about 25% of lefties in Major League Baseball. Since most players are right handed, one could argue that lefties are closer to first base allowing them to make close calls. Also, they can hit better when facing opposite hand pitcher. The below visuallizations look at 1157 baseball players statistics over the lifetime of their career.
+      </p>
+      
+    <script type="text/javascript">
+      "use strict";
+
+      // Global variables.
+      // Define chart boundaries, margins and padding      
+      var outerWidth = 600,
+          outerHeight = 200,
+          margin = { left: 70, top: 0, right: 30, bottom: 20 },
+          barPadding = 0.2;
+
+            
+      var tooltip = d3.select("body").append("div")
+          .style("position", "absolute")
+          .style('padding','0 10px')
+          .style('opacity',0)
+          .attr('class','tooltip');
+          // .text("sample tooltip");
+
+
+      //Define chart column variable names
+      var xColumn = "values",
+          yColumn = "key",
+          // xAxisLabelText = "Average Home Runs",
+          xAxisLabelOffset = 55,
+          yAxisLabelText = "Handedness",
+          yAxisLabelOffset = 40;
+
+      var innerWidth  = outerWidth  - margin.left - margin.right;
+      var innerHeight = outerHeight - margin.top  - margin.bottom;
+      
+    // Tooltip name.
+    function formatTooltip(handedness) {
+      // if (handedness == 'R') {
+      //   return 'Right';
+      // }
+      switch (handedness) {
+        case 'R':
+          return 'Right';
+        case 'L':
+          return 'Left';
+        case 'B':
+          return 'Both';
+        default:
+          return handedness;
+      }
+    }
+    ///////////////////////////////////////////////////////////////////////////
+    // Create draw function.
+    function draw(data) {
+             //Create and append svg element
+      var svg = d3.select("body")
+          .append("svg")
+          .attr("width",  outerWidth)
+          .attr("height", outerHeight)
+          .attr("class", "svg");
+
+      // Create svg "group" element 
+      var g = svg.append("g").attr("class", "graphContainer")
+          .attr("transform",
+              "translate(" + margin.left + "," + margin.top + ")");
+
+      //Define xAxis "group" and alignment
+      var xAxisG = g.append("g")
+          .attr("class", "x axis")
+          .attr("transform", "translate(0," + innerHeight + ")")
+
+      
+      // Create x axis label and alignment
+      var xAxisLabel = xAxisG.append("text")
+          .style("text-anchor", "middle") //Center text
+          .attr("x", innerWidth / 2)      //Center in horizontal direction
+          .attr("y", xAxisLabelOffset)    //Y position
+          .attr("class", "label");        //Assign class for easy access
+          
+
+      //Define yAxis "group" and labels
+      var yAxisG = g.append("g")
+         .attr("class", "y axis");
+        
+
+      //Create x axis label and alignment
+      yAxisG.append("text")
+          .style("text-anchor", "middle")
+          .attr("transform", "translate(-" + yAxisLabelOffset + "," + (innerHeight / 2) + ") rotate(-90)")
+          .attr("class", "label")
+          .text(yAxisLabelText);
+
+
+      //Define scales
+      //Use ordinal scales for categorical data
+      //Use rangeBands to automatically calculate each bar with padding
+      var xScale = d3.scale.linear().range(      [0, innerWidth]);
+      var yScale = d3.scale.ordinal().rangeBands([0, innerHeight], barPadding);
+   
+
+      //Create x, y Axis instance and set scale
+      var xAxis = d3.svg.axis().scale(xScale).orient("bottom")
+          .ticks(10)              // Use approximately 10 ticks marks.
+          .outerTickSize(0);      // Turn off the marks at the end of the axis.
+      var yAxis = d3.svg.axis().scale(yScale).orient("left")
+          .outerTickSize(0);      // Turn off the marks at the end of the axis.
+
+          //Define x,y scale domain after data is loaded
+          xScale.domain([0, d3.max(data, function (d){ return d[xColumn]; })]);
+          yScale.domain(       data.map( function (d){ return d[yColumn]; }));
+          
+          //Use "group" element to call axes and apply the axes method
+          xAxisG.call(xAxis);
+          yAxisG.call(yAxis);
+
+          // debugger;
+
+
+      //Create bars variable
+      //Use "group" to create empty rect, bind data and append rect
+      var bars = g.selectAll(".bar").data(data);
+      // Enter
+      bars.enter().append("rect")
+          .attr("class", "bar")
+          .attr("height", yScale.rangeBand());
+      // Update 
+      bars.attr("x", 0)
+          .attr("width", 0) //this is the initial value to start transition
+          .transition()
+          .duration(700)
+          .attr("y",     function (d){ return yScale(d[yColumn]); })
+          .attr("width", function (d){ return xScale(d[xColumn]); });
+      // Mouse over tooltip
+      bars.on('mouseover', function(d) {
+        tooltip.transition()
+            .style('opacity', .9);
+        tooltip.html(formatTooltip(d.key) + " : " + d.values.toFixed(0))
+            .style('left',(d3.event.pageX - 35) + 'px')
+            .style('top', (d3.event.pageY - 30) + 'px')
+      });
+      // Mouse out
+      bars.on('mouseout', function(d) {
+        tooltip.transition()
+            .style('opacity', 0)
+      });
+      // Exit and remove data  
+      bars.exit().remove();
+      }  
+
+      /////////////////////////////////////////////////////////////////////////
+      function drawAvgHR(dataset) {
+          //Transform data to group handedness together and avg total home runs
+        var data = d3.nest()
+            .key(function(d) { 
+              return d.handedness; })
+            .rollup(function(v) { 
+              return d3.mean(v, function(d) { 
+                return d.HR; 
+              }); 
+            })
+            .entries(dataset);
+        draw(data);
+      }
+
+      function drawAvgHeight(dataCSV) {
+          //Transform data to group handedness together and avg height
+        var data = d3.nest()
+            .key(function(d) { 
+              return d.handedness; 
+            })
+            .rollup(function(v) { 
+              return d3.mean(v, function(d) { 
+                return d.height; 
+              }); 
+            })
+            .entries(dataCSV);
+        draw(data);
+      }
+
+      function drawAvgWeight(dataCSV) {
+          //Transform data to group handedness together and avg weight
+        var data = d3.nest()
+            .key(function(d) { 
+              return d.handedness; 
+            })
+            .rollup(function(v) { 
+              return d3.mean(v, function(d) { 
+                return d.weight; 
+              }); 
+            })
+            .entries(dataCSV);
+        draw(data);
+      }
+
+
+      /////////////////////////////////////////////////////////////////////////
+      function type(d) {
+          d.handedness = d.handedness,
+          d.HR = +d.HR,
+          d.height = +d.height,
+          d.weight = +d.weight;
+          return d;
+      }
+      
+      var dataset;
+
+      d3.csv("baseball_data.csv", type, function(error, data) {
+        if (error) {
+          console.log(error);
+        } else {
+          console.log(data);
+          dataset = data;
+          d3.select("body")
+          .append("h2")
+          .text("Average weight (lbs) among players");
+          drawAvgWeight(dataset);
+          d3.select("body")
+              .append("p")
+              .text("There are 734 right handed players, 316 left handed players, and 104 who used both hands. The left and right handed player's weight averages around 185 pounds.")
+          d3.select("body")
+              .append("h2")
+              .text("Average Height (inches) Among Players");
+          drawAvgHeight(dataset);
+          d3.select("body")
+              .append("p")
+              .text("The left and right handed player's height averages around 73 inches while ambidextrous players are trailing at 72 inches tall.")
+          d3.select("body")
+              .append("h2")
+              .text("Average Home Runs Among Players");
+          drawAvgHR(dataset);
+          d3.select("body")
+              .append("p")
+              .text("With similar physical attributes the left handed players score 13 more home runs than right handed player and 24 home runs over ambidextrous players over the lifetime of their career.")
+
+        }
+      });
+
+    </script>
+  </body>
+</html>
